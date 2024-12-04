@@ -85,6 +85,7 @@ const OrderHistory = ({ orders, isLoadingOrders }: OrderHistoryProps) => {
       // Create and show notification
       new Notification(notificationTitle, {
         body: notificationBody,
+        icon: "/logo.png",
       });
     }
   };
