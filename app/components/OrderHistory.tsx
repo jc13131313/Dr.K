@@ -1,6 +1,6 @@
+import * as htmlToImage from "html-to-image";
 import { Order } from "@/app/order/page";
 import { useState, useEffect, useRef } from "react";
-import * as htmlToImage from "html-to-image";
 import PaymentModal from "./PaymentModal";
 
 interface OrderHistoryProps {
@@ -15,6 +15,9 @@ const OrderHistory = ({ orders, isLoadingOrders }: OrderHistoryProps) => {
   const [notifiedOrders, setNotifiedOrders] = useState<string[]>([]);
   const [showBlockedNotificationModal, setShowBlockedNotificationModal] =
     useState(false);
+  const [showOrderStatusModal, setShowOrderStatusModal] = useState(false);
+  const [orderStatusMessage, setOrderStatusMessage] = useState<string>('');
+  const [orderStatusTitle, setOrderStatusTitle] = useState<string>('');
   const receiptRef = useRef<HTMLDivElement>(null);
 
   // Function to get the status color based on the order's status
@@ -35,16 +38,8 @@ const OrderHistory = ({ orders, isLoadingOrders }: OrderHistoryProps) => {
     }
   }
 
-  // Request notification permission and notify relevant order statuses
+  // Handle modal notification for relevant order statuses
   useEffect(() => {
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission().then((permission) => {
-        if (permission !== "granted") {
-          setShowBlockedNotificationModal(true);
-        }
-      });
-    }
-
     orders.forEach((order) => {
       if (
         order.id &&
@@ -53,41 +48,37 @@ const OrderHistory = ({ orders, isLoadingOrders }: OrderHistoryProps) => {
           order.status === "ready" ||
           order.status === "cancelled")
       ) {
-        sendStatusNotification(order);
+        showOrderStatusModalDialog(order);
         setNotifiedOrders((prev) => [...prev, order.id as string]);
       }
     });
   }, [orders, notifiedOrders]);
 
-  // Function to send a notification
-  const sendStatusNotification = (order: Order) => {
-    if (Notification.permission === "granted") {
-      let notificationTitle = "";
-      let notificationBody = "";
+  // Function to show modal for order status updates
+  const showOrderStatusModalDialog = (order: Order) => {
+    let title = '';
+    let body = '';
 
-      switch (order.status) {
-        case "accepted":
-          notificationTitle = "Order Accepted!";
-          notificationBody = `Your order #${order.orderNumber} has been accepted.`;
-          break;
-        case "ready":
-          notificationTitle = "Order Ready to Serve!";
-          notificationBody = `Your order #${order.orderNumber} is ready to serve.`;
-          break;
-        case "cancelled":
-          notificationTitle = "Order Cancelled!";
-          notificationBody = `Your order #${order.orderNumber} has been cancelled.`;
-          break;
-        default:
-          return; // Don't show a notification for other statuses
-      }
-
-      // Create and show notification
-      new Notification(notificationTitle, {
-        body: notificationBody,
-        icon: "/logo.png",
-      });
+    switch (order.status) {
+      case "accepted":
+        title = "Order Accepted!";
+        body = `Your order #${order.orderNumber} has been accepted.`;
+        break;
+      case "ready":
+        title = "Order Ready to Serve!";
+        body = `Your order #${order.orderNumber} is ready to serve.`;
+        break;
+      case "cancelled":
+        title = "Order Cancelled!";
+        body = `Your order #${order.orderNumber} has been cancelled.`;
+        break;
+      default:
+        return; // Don't show modal for other statuses
     }
+
+    setOrderStatusTitle(title);
+    setOrderStatusMessage(body);
+    setShowOrderStatusModal(true);
   };
 
   const handlePaymentSubmit = (method: string) => {
@@ -203,7 +194,6 @@ const OrderHistory = ({ orders, isLoadingOrders }: OrderHistoryProps) => {
                     Proceed to the counter - Thank You!
                   </div>
                 )}
-
             </div>
           ))}
         </div>
@@ -223,7 +213,7 @@ const OrderHistory = ({ orders, isLoadingOrders }: OrderHistoryProps) => {
               <h3 className="text-lg font-bold mb-4 text-center">DR.K</h3>
               <h3 className="text-lg font-bold mb-4 text-center">Receipt</h3>
               <div className="text-left">
-              <p>Order No: {selectedOrder.orderNumber}</p>
+                <p>Order No: {selectedOrder.orderNumber}</p>
                 <p>Order ID: {selectedOrder.id}</p>
                 <p>Table: {selectedOrder.tableNumber}</p>
                 <p>Total: ₱{selectedOrder.total.toFixed(2)}</p>
@@ -284,6 +274,23 @@ const OrderHistory = ({ orders, isLoadingOrders }: OrderHistoryProps) => {
         orderTotal={selectedOrder?.total || 0}
         orderId={selectedOrder?.id || ""}
       />
+
+      {showOrderStatusModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h3 className="text-xl font-semibold text-center">{orderStatusTitle}</h3>
+            <p className="mt-2 text-center">{orderStatusMessage}</p>
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={() => setShowOrderStatusModal(false)}
+                className="w-full mt-3 px-4 py-2 bg-gray-200 text-orange-600 rounded-md hover:bg-orange-600 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
